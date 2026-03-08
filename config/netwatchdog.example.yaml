@@ -1,0 +1,99 @@
+# netwatchdog.example.yaml
+# Copy this file to config/netwatchdog.yaml and edit for your environment.
+# Environment variable overrides: NETWATCHDOG__SECTION__KEY=value
+
+# ---------------------------------------------------------------------------
+# Database
+# ---------------------------------------------------------------------------
+database:
+  path: /var/lib/netwatchdog/netwatchdog.db  # Path to SQLite file
+  wal_mode: true                              # WAL mode allows concurrent reads
+
+# ---------------------------------------------------------------------------
+# Hosts to monitor
+# Single IPs, CIDR ranges, and dash-separated ranges are all supported.
+# ---------------------------------------------------------------------------
+hosts:
+  addresses:
+    - 192.168.1.1
+    - 192.168.1.0/24
+    - 10.0.0.1-10.0.0.50
+  labels:
+    192.168.1.1: "Primary Router"
+    10.0.0.1: "Core Switch"
+
+# ---------------------------------------------------------------------------
+# Scanner
+# ---------------------------------------------------------------------------
+scanner:
+  default_tool: auto          # nmap | masscan | auto
+                              # auto = masscan+nmap for full scans, nmap for quick
+  require_root: true          # false = use nmap TCP connect scan (no root needed, slower)
+  nmap_path: /usr/bin/nmap
+  masscan_path: /usr/bin/masscan
+  batch_size: 50              # IPs per scanner subprocess call
+  max_workers: 4              # Parallel scanner threads
+  masscan_rate: 10000         # Packets/sec for masscan (tune to your network)
+  nmap_timing: T4             # nmap timing template: T0 (slowest) to T5 (fastest)
+  quick_ports: "1-1024"       # Port range for quick scans
+  full_ports: "1-65535"       # Port range for full scans
+  timeout_per_batch: 600      # Seconds before a batch is killed (10 min)
+
+# ---------------------------------------------------------------------------
+# Schedule (standard 5-field cron expressions)
+# ---------------------------------------------------------------------------
+schedule:
+  quick_scan:
+    enabled: true
+    cron: "0 2 * * *"        # Daily at 02:00
+
+  full_scan:
+    enabled: true
+    cron: "0 3 * * 0"        # Weekly, Sunday at 03:00
+    # Monthly example: "0 3 1 * *"
+
+# ---------------------------------------------------------------------------
+# Web UI
+# ---------------------------------------------------------------------------
+web:
+  host: 127.0.0.1            # Use 0.0.0.0 to allow external access
+  port: 8080
+  secret_key: "changeme"     # MUST be changed for production
+  debug: false
+  auth:
+    enabled: false           # Enable HTTP Basic Auth
+    username: admin
+    password: changeme
+
+# ---------------------------------------------------------------------------
+# Notifications
+# ---------------------------------------------------------------------------
+notifications:
+  email:
+    enabled: false
+    smtp_host: smtp.example.com
+    smtp_port: 587
+    smtp_use_tls: true
+    smtp_username: netwatchdog@example.com
+    smtp_password: "smtp-password"   # Or use: NETWATCHDOG__NOTIFICATIONS__EMAIL__SMTP_PASSWORD
+    from_address: netwatchdog@example.com
+    to_addresses:
+      - ops@example.com
+    batch_changes: true      # true = one email per scan; false = one email per change
+    min_severity: any        # any | open_only (only alert when ports open)
+
+  log:
+    enabled: true
+    path: /var/log/netwatchdog/changes.jsonl
+    rotate_mb: 100
+    backup_count: 5
+
+# ---------------------------------------------------------------------------
+# Application logging
+# ---------------------------------------------------------------------------
+logging:
+  level: INFO                # DEBUG | INFO | WARNING | ERROR
+  format: json               # json | text
+  path: /var/log/netwatchdog/netwatchdog.log
+  rotate_mb: 50
+  backup_count: 10
