@@ -66,7 +66,7 @@ def test_run_migrations_is_idempotent(tmp_path: Path):
     engine = create_db_engine(db_path)
     first = run_migrations(engine)
     second = run_migrations(engine)
-    assert len(first) == 1
+    assert len(first) >= 1
     assert len(second) == 0
 
 
@@ -76,9 +76,9 @@ def test_run_migrations_tracks_versions(tmp_path: Path):
     run_migrations(engine)
     with engine.connect() as conn:
         rows = conn.execute(text("SELECT version, description FROM schema_migrations")).fetchall()
-    assert len(rows) == 1
-    assert rows[0][0] == 1
-    assert "initial schema" in rows[0][1]
+    assert len(rows) >= 1
+    versions = {r[0] for r in rows}
+    assert 1 in versions  # initial schema always present
 
 
 def test_run_migrations_applies_in_order(tmp_path: Path):

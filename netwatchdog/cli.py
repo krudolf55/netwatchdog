@@ -12,6 +12,7 @@ from netwatchdog.config import load_config
 from netwatchdog.database.connection import create_db_engine, create_session_factory
 from netwatchdog.database.migrations import run_migrations
 from netwatchdog.database.models import Host
+from netwatchdog.database.sync import sync_hosts_from_config
 from netwatchdog.utils.ip_utils import expand_target, validate_ip
 
 
@@ -46,7 +47,7 @@ def _get_session(ctx: click.Context):
 @cli.command("init-db")
 @click.pass_context
 def init_db(ctx: click.Context) -> None:
-    """Initialize the database and run migrations."""
+    """Initialize the database, run migrations, and sync hosts from config."""
     cfg = load_config(ctx.obj.get("config_path"))
     engine = create_db_engine(cfg.database.path, wal_mode=cfg.database.wal_mode)
     applied = run_migrations(engine)
@@ -54,6 +55,19 @@ def init_db(ctx: click.Context) -> None:
         click.echo(f"Applied {len(applied)} migration(s): {applied}")
     else:
         click.echo("Database is already up to date.")
+
+    # Sync hosts from config file
+    if cfg.hosts:
+        factory = create_session_factory(engine)
+        session = factory()
+        counts = sync_hosts_from_config(session, cfg)
+        session.close()
+        click.echo(
+            f"Config hosts: {counts['added']} added, "
+            f"{counts['updated']} updated, "
+            f"{counts['unchanged']} unchanged."
+        )
+
     click.echo(f"Database: {cfg.database.path}")
 
 
@@ -83,6 +97,7 @@ def add_host(ctx: click.Context, target: str, label: Optional[str]) -> None:
         host = Host(
             ip_address=ip,
             label=label,
+            source="cli",
             created_at=_now(),
             updated_at=_now(),
         )
@@ -109,15 +124,22 @@ def remove_host(ctx: click.Context, target: str) -> None:
         raise click.ClickException(str(e))
 
     removed = 0
+    config_skipped = 0
     for ip in ips:
         host = session.query(Host).filter_by(ip_address=ip).first()
         if host:
+            if host.source == "config":
+                config_skipped += 1
+                continue
             session.delete(host)
             removed += 1
 
     session.commit()
     session.close()
-    click.echo(f"Removed {removed} host(s).")
+    msg = f"Removed {removed} host(s)."
+    if config_skipped:
+        msg += f" Skipped {config_skipped} config-defined host(s) (remove from YAML instead)."
+    click.echo(msg)
 
 
 # ---- list-hosts ------------------------------------------------------------
@@ -139,12 +161,13 @@ def list_hosts(ctx: click.Context, show_all: bool) -> None:
         session.close()
         return
 
-    click.echo(f"{'IP Address':<20} {'Label':<25} {'Active':<8} {'Added'}")
-    click.echo("-" * 75)
+    click.echo(f"{'IP Address':<20} {'Label':<25} {'Source':<10} {'Active':<8} {'Added'}")
+    click.echo("-" * 85)
     for h in hosts:
         active_str = "yes" if h.active else "no"
         label = h.label or ""
-        click.echo(f"{h.ip_address:<20} {label:<25} {active_str:<8} {h.created_at}")
+        source = h.source or "cli"
+        click.echo(f"{h.ip_address:<20} {label:<25} {source:<10} {active_str:<8} {h.created_at}")
 
     click.echo(f"\nTotal: {len(hosts)} host(s)")
     session.close()

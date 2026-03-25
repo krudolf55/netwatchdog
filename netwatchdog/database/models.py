@@ -23,6 +23,7 @@ class Host(Base):  # type: ignore[misc]
     hostname = Column(Text)
     label = Column(Text)
     active = Column(Integer, nullable=False, default=1)
+    source = Column(Text, nullable=False, default="cli")  # 'config' or 'cli'
     created_at = Column(Text, nullable=False)
     updated_at = Column(Text, nullable=False)
 
