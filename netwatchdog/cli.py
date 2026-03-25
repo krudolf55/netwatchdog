@@ -199,3 +199,87 @@ def status(ctx: click.Context) -> None:
     else:
         click.echo("Last scan:       none")
     session.close()
+
+
+# ---- scan ------------------------------------------------------------------
+
+@cli.command("scan")
+@click.option("--type", "-t", "scan_type", type=click.Choice(["quick", "full"]), default="quick")
+@click.pass_context
+def scan_now(ctx: click.Context, scan_type: str) -> None:
+    """Run a scan immediately."""
+    cfg = load_config(ctx.obj.get("config_path"))
+    engine = create_db_engine(cfg.database.path, wal_mode=cfg.database.wal_mode)
+    run_migrations(engine)
+
+    # Sync hosts from config
+    if cfg.hosts:
+        factory = create_session_factory(engine)
+        session = factory()
+        sync_hosts_from_config(session, cfg)
+        session.close()
+
+    # Build notifiers
+    notifiers = _build_notifiers(cfg)
+
+    from netwatchdog.scheduler.jobs import run_scan_job
+    click.echo(f"Starting {scan_type} scan...")
+    job = run_scan_job(engine, cfg, scan_type, triggered_by="manual", notifiers=notifiers)
+    click.echo(f"Scan complete: status={job.status}, hosts={job.hosts_scanned}")
+    if job.error_message:
+        click.echo(f"Errors: {job.error_message}")
+
+
+# ---- start -----------------------------------------------------------------
+
+@cli.command("start")
+@click.pass_context
+def start(ctx: click.Context) -> None:
+    """Start the scheduler (runs scans on configured schedule)."""
+    cfg = load_config(ctx.obj.get("config_path"))
+    engine = create_db_engine(cfg.database.path, wal_mode=cfg.database.wal_mode)
+    run_migrations(engine)
+
+    # Sync hosts from config
+    if cfg.hosts:
+        factory = create_session_factory(engine)
+        session = factory()
+        counts = sync_hosts_from_config(session, cfg)
+        session.close()
+        click.echo(
+            f"Config hosts: {counts['added']} added, "
+            f"{counts['updated']} updated, "
+            f"{counts['unchanged']} unchanged."
+        )
+
+    notifiers = _build_notifiers(cfg)
+
+    from netwatchdog.scheduler.manager import SchedulerManager
+    manager = SchedulerManager(engine, cfg, notifiers)
+
+    click.echo("Starting scheduler...")
+    click.echo(f"  Quick scan: {'enabled' if cfg.schedule.quick_scan.enabled else 'disabled'}"
+               f" ({cfg.schedule.quick_scan.cron})")
+    click.echo(f"  Full scan:  {'enabled' if cfg.schedule.full_scan.enabled else 'disabled'}"
+               f" ({cfg.schedule.full_scan.cron})")
+    click.echo("Press Ctrl+C to stop.")
+
+    manager.start()
+
+
+# ---- helpers ---------------------------------------------------------------
+
+def _build_notifiers(cfg) -> list:
+    """Build notifier instances from config."""
+    notifiers = []
+    if cfg.notifications.log.enabled:
+        from netwatchdog.notifier.log_notifier import LogNotifier
+        notifiers.append(LogNotifier(
+            log_path=cfg.notifications.log.path,
+            rotate_mb=cfg.notifications.log.rotate_mb,
+            backup_count=cfg.notifications.log.backup_count,
+        ))
+    if cfg.notifications.email.enabled:
+        from netwatchdog.notifier.email_notifier import EmailNotifier
+        notifiers.append(EmailNotifier(cfg.notifications.email))
+    return notifiers
