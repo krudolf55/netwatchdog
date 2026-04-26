@@ -124,7 +124,7 @@ sqlite3 /var/lib/netwatchdog/netwatchdog.db "SELECT h.ip_address, p.port, p.prot
 sqlite3 /var/lib/netwatchdog/netwatchdog.db "SELECT id, scan_type, status, hosts_scanned, started_at, completed_at FROM scan_jobs ORDER BY started_at DESC LIMIT 10;"
 
 # recent changes detected
-sqlite3 /var/lib/netwatchdog/netwatchdog.db "SELECT h.ip_address, c.port, c.change_type, c.detected_at FROM change_events c JOIN hosts h ON h.id = c.host_id ORDER BY c.detected_at DESC LIMIT 20;"
+sqlite3 /var/lib/netwatchdog/netwatchdog.db "SELECT h.ip_address, c.port, c.previous_state, c.current_state, c.detected_at FROM change_events c JOIN hosts h ON h.id = c.host_id ORDER BY c.detected_at DESC LIMIT 20;"
 ```
 
 ## Configuration
