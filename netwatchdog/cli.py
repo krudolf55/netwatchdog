@@ -135,7 +135,7 @@ def import_hosts(ctx: click.Context, file: Path) -> None:
         if not line or line.startswith("#"):
             continue
         parts = line.split(None, 1)
-        target = parts[0]
+        target = parts[0].strip(",;")
         label: Optional[str] = parts[1].strip() if len(parts) > 1 else None
 
         try:
