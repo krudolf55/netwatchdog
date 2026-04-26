@@ -25,10 +25,16 @@ install -m 644 "$(dirname "$0")/periscan.sysusers" \
     /usr/lib/sysusers.d/periscan.conf
 systemd-sysusers periscan.conf
 
-# ── 4. Install config (skip if already present) ──────────────────────────────
+# ── 4. Create data and log directories ──────────────────────────────────────
+install -d -m 750 -o periscan -g periscan /var/lib/periscan
+install -d -m 750 -o periscan -g periscan /var/log/periscan
+
+# ── 5. Install config (skip if already present) ──────────────────────────────
 mkdir -p "$CONFIG_DIR"
 if [ ! -f "$CONFIG_DIR/periscan.yaml" ]; then
-    install -m 640 -o root -g periscan \
+    # 644 so any user can read it for manual CLI commands.
+    # Use env vars (PERISCAN__...) for secrets rather than storing them in plain text.
+    install -m 644 -o root -g periscan \
         "$(dirname "$0")/../config/periscan.example.yaml" \
         "$CONFIG_DIR/periscan.yaml"
     echo ""
@@ -39,7 +45,15 @@ if [ ! -f "$CONFIG_DIR/periscan.yaml" ]; then
     echo ""
 fi
 
-# ── 5. Install and enable the systemd unit ───────────────────────────────────
+# ── 6. Add the installing user to the periscan group ─────────────────────────
+if [ -n "${SUDO_USER:-}" ]; then
+    usermod -aG periscan "$SUDO_USER"
+    echo "  Added $SUDO_USER to the 'periscan' group."
+    echo "  Log out and back in for group membership to take effect."
+    echo ""
+fi
+
+# ── 7. Install and enable the systemd unit ───────────────────────────────────
 install -m 644 "$(dirname "$0")/periscan.service" "$SERVICE_FILE"
 systemctl daemon-reload
 systemctl enable periscan
