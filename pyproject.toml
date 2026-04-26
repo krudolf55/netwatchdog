@@ -36,6 +36,9 @@ netwatchdog = "netwatchdog.cli:cli"
 where = ["."]
 include = ["netwatchdog*"]
 
+[tool.setuptools.package-data]
+netwatchdog = ["migrations/*.sql"]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
