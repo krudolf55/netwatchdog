@@ -115,52 +115,60 @@ def add_host(ctx: click.Context, target: str, label: Optional[str]) -> None:
 @click.argument("file", type=click.Path(exists=True, path_type=Path))
 @click.pass_context
 def import_hosts(ctx: click.Context, file: Path) -> None:
-    """Import hosts from a text file (one entry per line).
+    """Import hosts from a text file into the config file (one entry per line).
 
-    Each line may be a single IP, CIDR range, or dash range. Optionally
-    follow the address with whitespace and a label:
+    Each line may be a single IP, CIDR range, or dash range:
 
     \b
         192.168.1.1
-        10.0.0.0/24   Core network
+        10.0.0.0/24
         10.1.0.1-10.1.0.50
     Blank lines and lines starting with # are ignored.
+    Restart the service after importing to pick up the changes.
     """
-    cfg, engine, session = _get_session(ctx)
-    run_migrations(engine)
+    import yaml
+
+    config_path = ctx.obj.get("config_path")
+    if config_path is None:
+        raise click.ClickException(
+            "No config file specified. Use: netwatchdog --config /path/to/config.yaml import-hosts ..."
+        )
+
+    raw = yaml.safe_load(config_path.read_text()) or {}
+    hosts_section = raw.setdefault("hosts", {})
+    if isinstance(hosts_section, list):
+        # bare list format — normalise to dict form
+        hosts_section = {"addresses": hosts_section}
+        raw["hosts"] = hosts_section
+    existing: List[str] = hosts_section.setdefault("addresses", [])
+    existing_set = set(existing)
 
     added = skipped = errors = 0
-    for lineno, raw in enumerate(file.read_text().splitlines(), 1):
-        line = raw.strip()
+    for lineno, raw_line in enumerate(file.read_text().splitlines(), 1):
+        line = raw_line.strip()
         if not line or line.startswith("#"):
             continue
-        parts = line.split(None, 1)
-        target = parts[0].strip(",;")
-        label: Optional[str] = parts[1].strip() if len(parts) > 1 else None
+        target = line.split(None, 1)[0].strip(",;")
 
         try:
-            ips = expand_target(target)
+            expand_target(target)  # validate only
         except ValueError as e:
             click.echo(f"  line {lineno}: skipping {target!r} — {e}", err=True)
             errors += 1
             continue
 
-        for ip in ips:
-            if session.query(Host).filter_by(ip_address=ip).first():
-                skipped += 1
-                continue
-            session.add(Host(
-                ip_address=ip,
-                label=label,
-                source="cli",
-                created_at=_now(),
-                updated_at=_now(),
-            ))
-            added += 1
+        if target in existing_set:
+            skipped += 1
+            continue
 
-    session.commit()
-    session.close()
+        existing.append(target)
+        existing_set.add(target)
+        added += 1
+
+    config_path.write_text(yaml.dump(raw, default_flow_style=False, allow_unicode=True))
     click.echo(f"Imported {added} host(s), skipped {skipped} duplicate(s), {errors} error(s).")
+    if added:
+        click.echo("Restart the service to apply: sudo systemctl restart netwatchdog")
 
 
 # ---- remove-host -----------------------------------------------------------
