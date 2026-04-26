@@ -94,6 +94,32 @@ netwatchdog --config /etc/netwatchdog/netwatchdog.yaml scan --type quick
 netwatchdog --config /etc/netwatchdog/netwatchdog.yaml scan --type full
 ```
 
+Scan a single host:
+
+```bash
+netwatchdog --config /etc/netwatchdog/netwatchdog.yaml scan --host 192.168.1.1
+```
+
+## Scan Output
+
+Port changes are appended to the change log as they are detected:
+
+```bash
+tail -f /var/log/netwatchdog/changes.jsonl
+```
+
+General scan progress and errors:
+
+```bash
+tail -f /var/log/netwatchdog/netwatchdog.log
+```
+
+Query past scan jobs directly from the database:
+
+```bash
+sqlite3 /var/lib/netwatchdog/netwatchdog.db "SELECT * FROM scan_jobs ORDER BY started_at DESC LIMIT 10;"
+```
+
 ## Configuration
 
 The config file lives at `/etc/netwatchdog/netwatchdog.yaml`. An annotated example is at `config/netwatchdog.example.yaml`.
