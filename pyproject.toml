@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "netwatchdog"
 version = "0.1.0"
 description = "Network port change monitoring system"
-requires-python = ">=3.9"
+requires-python = ">=3.8"
 license = { text = "MIT" }
 dependencies = [
     "python-nmap>=0.7.1",
