@@ -306,8 +306,9 @@ def status(ctx: click.Context) -> None:
 
 @cli.command("scan")
 @click.option("--type", "-t", "scan_type", type=click.Choice(["quick", "full"]), default="quick")
+@click.option("--host", "-h", "host", default=None, help="Scan a single IP instead of all hosts.")
 @click.pass_context
-def scan_now(ctx: click.Context, scan_type: str) -> None:
+def scan_now(ctx: click.Context, scan_type: str, host: Optional[str]) -> None:
     """Run a scan immediately."""
     cfg = load_config(ctx.obj.get("config_path"))
     engine = create_db_engine(cfg.database.path, wal_mode=cfg.database.wal_mode)
@@ -324,8 +325,9 @@ def scan_now(ctx: click.Context, scan_type: str) -> None:
     notifiers = _build_notifiers(cfg)
 
     from netwatchdog.scheduler.jobs import run_scan_job
-    click.echo(f"Starting {scan_type} scan...")
-    job = run_scan_job(engine, cfg, scan_type, triggered_by="manual", notifiers=notifiers)
+    target = host or "all hosts"
+    click.echo(f"Starting {scan_type} scan ({target})...")
+    job = run_scan_job(engine, cfg, scan_type, triggered_by="manual", notifiers=notifiers, host_filter=host)
     click.echo(f"Scan complete: status={job.status}, hosts={job.hosts_scanned}")
     if job.error_message:
         click.echo(f"Errors: {job.error_message}")

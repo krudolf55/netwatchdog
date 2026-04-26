@@ -42,6 +42,7 @@ def run_scan_job(
     scan_type: str,
     triggered_by: str = "scheduler",
     notifiers: Optional[List[BaseNotifier]] = None,
+    host_filter: Optional[str] = None,
 ) -> ScanJob:
     """Execute a full scan pipeline: scan -> detect changes -> notify.
 
@@ -51,6 +52,7 @@ def run_scan_job(
         scan_type: "quick" or "full".
         triggered_by: "scheduler" or "manual".
         notifiers: List of notification channels. If None, no notifications sent.
+        host_filter: If set, scan only this IP instead of all active hosts.
 
     Returns:
         The completed ScanJob record.
@@ -90,7 +92,7 @@ def run_scan_job(
             session.close()
             return scan_job
 
-        target_ips = [h.ip_address for h in hosts]
+        target_ips = [host_filter] if host_filter else [h.ip_address for h in hosts]
 
         # Create scanner and orchestrator
         scanner = _create_scanner(config)
