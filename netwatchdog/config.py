@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 import yaml
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
@@ -21,7 +21,7 @@ class DatabaseConfig(BaseModel):
 
 
 class HostLabels(BaseModel):
-    labels: dict[str, str] = Field(default_factory=dict)
+    labels: Dict[str, str] = Field(default_factory=dict)
 
 
 class ScannerConfig(BaseModel):
@@ -70,7 +70,7 @@ class EmailConfig(BaseModel):
     smtp_username: str = ""
     smtp_password: str = ""
     from_address: str = ""
-    to_addresses: list[str] = Field(default_factory=list)
+    to_addresses: List[str] = Field(default_factory=list)
     batch_changes: bool = True
     min_severity: str = Field("any", pattern="^(any|open_only)$")
 
@@ -102,8 +102,8 @@ class LoggingConfig(BaseModel):
 
 class Config(BaseModel):
     database: DatabaseConfig = DatabaseConfig()
-    hosts: list[str] = Field(default_factory=list)
-    host_labels: dict[str, str] = Field(default_factory=dict)
+    hosts: List[str] = Field(default_factory=list)
+    host_labels: Dict[str, str] = Field(default_factory=dict)
     scanner: ScannerConfig = ScannerConfig()
     schedule: ScheduleConfig = ScheduleConfig()
     web: WebConfig = WebConfig()
@@ -112,7 +112,7 @@ class Config(BaseModel):
 
     @field_validator("hosts")
     @classmethod
-    def hosts_not_empty(cls, v: list[str]) -> list[str]:
+    def hosts_not_empty(cls, v: List[str]) -> List[str]:
         if not v:
             raise ValueError("hosts list cannot be empty")
         return v
@@ -139,7 +139,7 @@ _SEARCH_PATHS = [
 ]
 
 
-def _apply_env_overrides(data: dict[str, Any]) -> dict[str, Any]:
+def _apply_env_overrides(data: Dict[str, Any]) -> Dict[str, Any]:
     """Apply NETWATCHDOG__SECTION__KEY env vars as overrides."""
     prefix = "NETWATCHDOG__"
     for key, value in os.environ.items():
@@ -153,7 +153,7 @@ def _apply_env_overrides(data: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
-def load_config(path: Path | None = None) -> Config:
+def load_config(path: Optional[Path] = None) -> Config:
     """Load and validate configuration from a YAML file.
 
     Search order (first found wins):
@@ -164,7 +164,7 @@ def load_config(path: Path | None = None) -> Config:
 
     Environment variable overrides are applied after file loading.
     """
-    config_path: Path | None = path
+    config_path: Optional[Path] = path
     if config_path is None:
         for candidate in _SEARCH_PATHS:
             if candidate.exists():
