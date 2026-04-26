@@ -109,6 +109,60 @@ def add_host(ctx: click.Context, target: str, label: Optional[str]) -> None:
     click.echo(f"Added {added} host(s), skipped {skipped} duplicate(s).")
 
 
+# ---- import-hosts ----------------------------------------------------------
+
+@cli.command("import-hosts")
+@click.argument("file", type=click.Path(exists=True, path_type=Path))
+@click.pass_context
+def import_hosts(ctx: click.Context, file: Path) -> None:
+    """Import hosts from a text file (one entry per line).
+
+    Each line may be a single IP, CIDR range, or dash range. Optionally
+    follow the address with whitespace and a label:
+
+    \b
+        192.168.1.1
+        10.0.0.0/24   Core network
+        10.1.0.1-10.1.0.50
+    Blank lines and lines starting with # are ignored.
+    """
+    cfg, engine, session = _get_session(ctx)
+    run_migrations(engine)
+
+    added = skipped = errors = 0
+    for lineno, raw in enumerate(file.read_text().splitlines(), 1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = line.split(None, 1)
+        target = parts[0]
+        label: Optional[str] = parts[1].strip() if len(parts) > 1 else None
+
+        try:
+            ips = expand_target(target)
+        except ValueError as e:
+            click.echo(f"  line {lineno}: skipping {target!r} — {e}", err=True)
+            errors += 1
+            continue
+
+        for ip in ips:
+            if session.query(Host).filter_by(ip_address=ip).first():
+                skipped += 1
+                continue
+            session.add(Host(
+                ip_address=ip,
+                label=label,
+                source="cli",
+                created_at=_now(),
+                updated_at=_now(),
+            ))
+            added += 1
+
+    session.commit()
+    session.close()
+    click.echo(f"Imported {added} host(s), skipped {skipped} duplicate(s), {errors} error(s).")
+
+
 # ---- remove-host -----------------------------------------------------------
 
 @cli.command("remove-host")

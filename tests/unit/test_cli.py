@@ -129,3 +129,59 @@ def test_remove_config_host_blocked(runner: CliRunner, config_file: Path):
     result = runner.invoke(cli, ["-c", str(config_file), "remove-host", "10.0.0.1"])
     assert "Removed 0" in result.output
     assert "config-defined" in result.output
+
+
+# ---- import-hosts tests ----------------------------------------------------
+
+def test_import_hosts_basic(runner: CliRunner, config_file: Path, tmp_path: Path):
+    runner.invoke(cli, ["-c", str(config_file), "init-db"])
+    hosts_file = tmp_path / "hosts.txt"
+    hosts_file.write_text("192.168.1.1\n192.168.1.2\n192.168.1.3\n")
+    result = runner.invoke(cli, ["-c", str(config_file), "import-hosts", str(hosts_file)])
+    assert result.exit_code == 0
+    assert "Imported 3" in result.output
+    assert "0 error(s)" in result.output
+
+
+def test_import_hosts_with_labels(runner: CliRunner, config_file: Path, tmp_path: Path):
+    runner.invoke(cli, ["-c", str(config_file), "init-db"])
+    hosts_file = tmp_path / "hosts.txt"
+    hosts_file.write_text("192.168.1.1  Primary Router\n192.168.1.2  Backup Router\n")
+    runner.invoke(cli, ["-c", str(config_file), "import-hosts", str(hosts_file)])
+    result = runner.invoke(cli, ["-c", str(config_file), "list-hosts"])
+    assert "Primary Router" in result.output
+    assert "Backup Router" in result.output
+
+
+def test_import_hosts_skips_comments_and_blanks(runner: CliRunner, config_file: Path, tmp_path: Path):
+    runner.invoke(cli, ["-c", str(config_file), "init-db"])
+    hosts_file = tmp_path / "hosts.txt"
+    hosts_file.write_text("# this is a comment\n\n192.168.1.1\n\n# another comment\n192.168.1.2\n")
+    result = runner.invoke(cli, ["-c", str(config_file), "import-hosts", str(hosts_file)])
+    assert "Imported 2" in result.output
+
+
+def test_import_hosts_skips_duplicates(runner: CliRunner, config_file: Path, tmp_path: Path):
+    runner.invoke(cli, ["-c", str(config_file), "init-db"])
+    hosts_file = tmp_path / "hosts.txt"
+    hosts_file.write_text("192.168.1.1\n")
+    runner.invoke(cli, ["-c", str(config_file), "import-hosts", str(hosts_file)])
+    result = runner.invoke(cli, ["-c", str(config_file), "import-hosts", str(hosts_file)])
+    assert "skipped 1 duplicate(s)" in result.output
+
+
+def test_import_hosts_invalid_line(runner: CliRunner, config_file: Path, tmp_path: Path):
+    runner.invoke(cli, ["-c", str(config_file), "init-db"])
+    hosts_file = tmp_path / "hosts.txt"
+    hosts_file.write_text("192.168.1.1\nnot-an-ip\n192.168.1.2\n")
+    result = runner.invoke(cli, ["-c", str(config_file), "import-hosts", str(hosts_file)])
+    assert "Imported 2" in result.output
+    assert "1 error(s)" in result.output
+
+
+def test_import_hosts_cidr(runner: CliRunner, config_file: Path, tmp_path: Path):
+    runner.invoke(cli, ["-c", str(config_file), "init-db"])
+    hosts_file = tmp_path / "hosts.txt"
+    hosts_file.write_text("192.168.1.0/30\n")  # expands to .1 and .2
+    result = runner.invoke(cli, ["-c", str(config_file), "import-hosts", str(hosts_file)])
+    assert "Imported 2" in result.output
