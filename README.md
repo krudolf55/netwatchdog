@@ -17,18 +17,45 @@ Network port change monitoring system. Periodically scans IP addresses for open 
 - nmap
 - masscan (optional, recommended for full scans)
 
-## Installation
+## Quick Setup
+
+**1. Clone and install**
 
 ```bash
-git clone --branch claude/deployment-readiness-check-atHl6 https://github.com/krudolf55/periscan.git
+git clone https://github.com/krudolf55/periscan.git
 cd periscan
 sudo bash deploy/install.sh
 ```
 
-Then edit the config before starting:
+**2. Create your config file**
 
 ```bash
+sudo mkdir -p /etc/periscan
+sudo cp config/periscan.example.yaml /etc/periscan/periscan.yaml
 sudo nano /etc/periscan/periscan.yaml
+```
+
+Set at minimum:
+- `web.secret_key` — change from `changeme`
+- `hosts.addresses` — add your IP ranges (or use `import-hosts` below)
+
+**3. Import your hosts (if you have a list)**
+
+```bash
+sudo periscan -c /etc/periscan/periscan.yaml import-hosts /path/to/hosts.txt
+```
+
+**4. Start the service**
+
+```bash
+sudo systemctl enable --now periscan
+sudo systemctl status periscan
+```
+
+**5. Verify it's running**
+
+```bash
+sudo journalctl -u periscan -f
 ```
 
 ## Managing Hosts
