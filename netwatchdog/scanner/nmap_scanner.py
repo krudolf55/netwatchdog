@@ -56,7 +56,8 @@ class NmapScanner(BaseScanner):
         target_str = " ".join(targets)
 
         # Build nmap arguments
-        args = f"-p {port_range} -{self._timing} --host-timeout {timeout}s"
+        # -Pn skips host discovery (ping) — required for internet hosts that block ICMP
+        args = f"-Pn -p {port_range} -{self._timing} --host-timeout {timeout}s"
         if self._require_root:
             args += " -sS -sV"  # SYN scan + version detection (needs root)
         else:
