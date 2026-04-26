@@ -114,10 +114,17 @@ General scan progress and errors:
 tail -f /var/log/netwatchdog/netwatchdog.log
 ```
 
-Query past scan jobs directly from the database:
+Query the database directly:
 
 ```bash
-sqlite3 /var/lib/netwatchdog/netwatchdog.db "SELECT * FROM scan_jobs ORDER BY started_at DESC LIMIT 10;"
+# open ports found
+sqlite3 /var/lib/netwatchdog/netwatchdog.db "SELECT h.ip_address, p.port, p.protocol, p.service_name FROM port_states p JOIN hosts h ON h.id = p.host_id WHERE p.state='open' ORDER BY h.ip_address, p.port;"
+
+# recent scan jobs
+sqlite3 /var/lib/netwatchdog/netwatchdog.db "SELECT id, scan_type, status, hosts_scanned, started_at, completed_at FROM scan_jobs ORDER BY started_at DESC LIMIT 10;"
+
+# recent changes detected
+sqlite3 /var/lib/netwatchdog/netwatchdog.db "SELECT h.ip_address, c.port, c.change_type, c.detected_at FROM change_events c JOIN hosts h ON h.id = c.host_id ORDER BY c.detected_at DESC LIMIT 20;"
 ```
 
 ## Configuration
