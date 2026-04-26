@@ -41,6 +41,18 @@ netwatchdog --config /etc/netwatchdog/netwatchdog.yaml add-host 192.168.1.0/24
 netwatchdog --config /etc/netwatchdog/netwatchdog.yaml add-host 10.0.0.1-10.0.0.50
 ```
 
+**Edit the config file directly:**
+
+```bash
+sudo nano /etc/netwatchdog/netwatchdog.yaml
+```
+
+Add entries under `hosts.addresses`, then restart the service to sync them into the database:
+
+```bash
+sudo systemctl restart netwatchdog
+```
+
 **Import hosts from a text file (one address per line):**
 
 ```bash
