@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from netwatchdog.scanner.base import (
+from periscan.scanner.base import (
     BaseScanner,
     HostResult,
     PortResult,

@@ -1,5 +1,5 @@
 -- 0001_initial_schema.sql
--- Core tables for netwatchdog port monitoring.
+-- Core tables for periscan port monitoring.
 
 CREATE TABLE hosts (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -9,9 +9,9 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError as SAIntegrityError
 
-from netwatchdog.database.connection import create_db_engine, create_session_factory
-from netwatchdog.database.migrations import run_migrations
-from netwatchdog.database.models import (
+from periscan.database.connection import create_db_engine, create_session_factory
+from periscan.database.migrations import run_migrations
+from periscan.database.models import (
     ChangeEvent,
     Host,
     NotificationLog,

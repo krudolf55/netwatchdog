@@ -1,24 +1,24 @@
 [Unit]
-Description=netwatchdog — network port change monitor
-Documentation=https://github.com/krudolf55/netwatchdog
+Description=periscan — network port change monitor
+Documentation=https://github.com/krudolf55/periscan
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=netwatchdog
-Group=netwatchdog
+User=periscan
+Group=periscan
 
-ExecStartPre=/usr/local/bin/netwatchdog --config /etc/netwatchdog/netwatchdog.yaml init-db
-ExecStart=/usr/local/bin/netwatchdog --config /etc/netwatchdog/netwatchdog.yaml start
+ExecStartPre=/usr/local/bin/periscan --config /etc/periscan/periscan.yaml init-db
+ExecStart=/usr/local/bin/periscan --config /etc/periscan/periscan.yaml start
 
 Restart=on-failure
 RestartSec=10s
 
-# Directories created automatically by systemd (owner: netwatchdog)
-StateDirectory=netwatchdog
-LogsDirectory=netwatchdog
-ConfigurationDirectory=netwatchdog
+# Directories created automatically by systemd (owner: periscan)
+StateDirectory=periscan
+LogsDirectory=periscan
+ConfigurationDirectory=periscan
 
 # Grant only the capabilities needed for raw packet scanning.
 # Remove CAP_NET_ADMIN if you don't use masscan.
@@ -30,7 +30,7 @@ NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=strict
 ProtectHome=yes
-ReadWritePaths=/var/lib/netwatchdog /var/log/netwatchdog
+ReadWritePaths=/var/lib/periscan /var/log/periscan
 
 # Allow nmap/masscan to open raw sockets
 LockPersonality=yes

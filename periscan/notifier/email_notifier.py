@@ -8,9 +8,9 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import List
 
-from netwatchdog.config import EmailConfig
-from netwatchdog.database.models import ChangeEvent
-from netwatchdog.notifier.base import BaseNotifier
+from periscan.config import EmailConfig
+from periscan.database.models import ChangeEvent
+from periscan.notifier.base import BaseNotifier
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ def _build_html_summary(changes: List[ChangeEvent]) -> str:
 
     table_rows = "\n".join(rows)
     return f"""<html><body>
-<h2>NetWatchdog Port Changes Detected</h2>
+<h2>PeriScan Port Changes Detected</h2>
 <p>{len(changes)} change(s) detected:</p>
 <table border="1" cellpadding="5" cellspacing="0" style="border-collapse:collapse">
 <tr style="background:#f5f5f5">
@@ -76,7 +76,7 @@ def _build_html_summary(changes: List[ChangeEvent]) -> str:
 </tr>
 {table_rows}
 </table>
-<p style="color:#999;font-size:12px">Sent by NetWatchdog</p>
+<p style="color:#999;font-size:12px">Sent by PeriScan</p>
 </body></html>"""
 
 
@@ -98,9 +98,9 @@ class EmailNotifier(BaseNotifier):
             logger.warning("No email recipients configured, skipping")
             return False
 
-        subject = f"[NetWatchdog] {len(changes)} port change(s) detected"
+        subject = f"[PeriScan] {len(changes)} port change(s) detected"
         text_body = (
-            f"NetWatchdog detected {len(changes)} port change(s):\n\n"
+            f"PeriScan detected {len(changes)} port change(s):\n\n"
             f"{_build_change_summary(changes)}\n"
         )
         html_body = _build_html_summary(changes)
@@ -141,8 +141,8 @@ class EmailNotifier(BaseNotifier):
 
     def send_test(self) -> bool:
         """Send a test email to verify SMTP configuration."""
-        msg = MIMEText("This is a test message from NetWatchdog.")
-        msg["Subject"] = "[NetWatchdog] Test notification"
+        msg = MIMEText("This is a test message from PeriScan.")
+        msg["Subject"] = "[PeriScan] Test notification"
         msg["From"] = self._config.from_address
         msg["To"] = ", ".join(self._config.to_addresses)
 

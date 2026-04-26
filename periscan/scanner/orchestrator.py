@@ -6,8 +6,8 @@ import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Optional
 
-from netwatchdog.config import ScannerConfig
-from netwatchdog.scanner.base import BaseScanner, HostResult, ScanResult
+from periscan.config import ScannerConfig
+from periscan.scanner.base import BaseScanner, HostResult, ScanResult
 
 logger = logging.getLogger(__name__)
 

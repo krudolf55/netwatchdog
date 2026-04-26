@@ -1,0 +1,3 @@
+# systemd-sysusers fragment — creates the periscan system account.
+# Installed to: /usr/lib/sysusers.d/periscan.conf
+u periscan - "periscan scanner" /var/lib/periscan /usr/sbin/nologin

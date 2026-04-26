@@ -8,8 +8,8 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import List
 
-from netwatchdog.database.models import ChangeEvent, Host
-from netwatchdog.notifier.base import BaseNotifier
+from periscan.database.models import ChangeEvent, Host
+from periscan.notifier.base import BaseNotifier
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ class LogNotifier(BaseNotifier):
             maxBytes=rotate_mb * 1024 * 1024,
             backupCount=backup_count,
         )
-        self._change_logger = logging.getLogger("netwatchdog.changes")
+        self._change_logger = logging.getLogger("periscan.changes")
         self._change_logger.addHandler(self._handler)
         self._change_logger.setLevel(logging.INFO)
         # Prevent propagation to avoid duplicate output

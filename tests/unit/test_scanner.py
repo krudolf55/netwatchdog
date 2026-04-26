@@ -7,16 +7,16 @@ from typing import List
 
 import pytest
 
-from netwatchdog.scanner.base import (
+from periscan.scanner.base import (
     BaseScanner,
     HostResult,
     PortResult,
     PortState,
     ScanResult,
 )
-from netwatchdog.scanner.masscan_scanner import MasscanScanner
-from netwatchdog.scanner.nmap_scanner import NmapScanner
-from netwatchdog.scanner.orchestrator import ScanOrchestrator, _chunk_list
+from periscan.scanner.masscan_scanner import MasscanScanner
+from periscan.scanner.nmap_scanner import NmapScanner
+from periscan.scanner.orchestrator import ScanOrchestrator, _chunk_list
 
 
 # ---------------------------------------------------------------------------
@@ -122,7 +122,7 @@ class TestNmapParser:
             )
         return mock_nm
 
-    @patch("netwatchdog.scanner.nmap_scanner.nmap.PortScanner")
+    @patch("periscan.scanner.nmap_scanner.nmap.PortScanner")
     def test_parse_single_host(self, mock_ps_class):
         mock_nm = self._make_mock_nm({
             "10.0.0.1": {
@@ -151,7 +151,7 @@ class TestNmapParser:
         assert result.hosts[0].ports[0].service_name == "ssh"
         assert result.hosts[0].ports[1].state == PortState.CLOSED
 
-    @patch("netwatchdog.scanner.nmap_scanner.nmap.PortScanner")
+    @patch("periscan.scanner.nmap_scanner.nmap.PortScanner")
     def test_parse_empty_results(self, mock_ps_class):
         mock_nm = MagicMock()
         mock_nm.all_hosts.return_value = []

@@ -1,12 +1,12 @@
-# netwatchdog.example.yaml
-# Copy this file to config/netwatchdog.yaml and edit for your environment.
-# Environment variable overrides: NETWATCHDOG__SECTION__KEY=value
+# periscan.example.yaml
+# Copy this file to config/periscan.yaml and edit for your environment.
+# Environment variable overrides: PERISCAN__SECTION__KEY=value
 
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
 database:
-  path: /var/lib/netwatchdog/netwatchdog.db  # Path to SQLite file
+  path: /var/lib/periscan/periscan.db  # Path to SQLite file
   wal_mode: true                              # WAL mode allows concurrent reads
 
 # ---------------------------------------------------------------------------
@@ -74,9 +74,9 @@ notifications:
     smtp_host: smtp.example.com
     smtp_port: 587
     smtp_use_tls: true
-    smtp_username: netwatchdog@example.com
-    smtp_password: "smtp-password"   # Or use: NETWATCHDOG__NOTIFICATIONS__EMAIL__SMTP_PASSWORD
-    from_address: netwatchdog@example.com
+    smtp_username: periscan@example.com
+    smtp_password: "smtp-password"   # Or use: PERISCAN__NOTIFICATIONS__EMAIL__SMTP_PASSWORD
+    from_address: periscan@example.com
     to_addresses:
       - ops@example.com
     batch_changes: true      # true = one email per scan; false = one email per change
@@ -84,7 +84,7 @@ notifications:
 
   log:
     enabled: true
-    path: /var/log/netwatchdog/changes.jsonl
+    path: /var/log/periscan/changes.jsonl
     rotate_mb: 100
     backup_count: 5
 
@@ -94,6 +94,6 @@ notifications:
 logging:
   level: INFO                # DEBUG | INFO | WARNING | ERROR
   format: json               # json | text
-  path: /var/log/netwatchdog/netwatchdog.log
+  path: /var/log/periscan/periscan.log
   rotate_mb: 50
   backup_count: 10

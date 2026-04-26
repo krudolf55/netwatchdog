@@ -1,3 +1,0 @@
-# systemd-sysusers fragment — creates the netwatchdog system account.
-# Installed to: /usr/lib/sysusers.d/netwatchdog.conf
-u netwatchdog - "netwatchdog scanner" /var/lib/netwatchdog /usr/sbin/nologin

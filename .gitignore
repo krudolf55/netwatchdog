@@ -8,7 +8,7 @@
 *.jsonl
 
 # Real config (only the example is committed)
-config/netwatchdog.yaml
+config/periscan.yaml
 
 # Secrets
 .env

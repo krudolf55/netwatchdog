@@ -9,8 +9,8 @@ from typing import List, Optional, Set, Tuple
 
 from sqlalchemy.orm import Session
 
-from netwatchdog.database.models import ChangeEvent, PortHistory, PortState, ScanJob
-from netwatchdog.scanner.base import HostResult, PortResult, ScanResult
+from periscan.database.models import ChangeEvent, PortHistory, PortState, ScanJob
+from periscan.scanner.base import HostResult, PortResult, ScanResult
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ class ChangeDetector:
         all_changes: List[ChangeEvent] = []
 
         # Build a lookup: ip -> host_id
-        from netwatchdog.database.models import Host
+        from periscan.database.models import Host
         hosts_by_ip = {
             h.ip_address: h.id
             for h in self._session.query(Host).filter_by(active=1).all()

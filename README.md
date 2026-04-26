@@ -1,4 +1,4 @@
-# netwatchdog
+# periscan
 
 Network port change monitoring system. Periodically scans IP addresses for open TCP ports and alerts on any changes.
 
@@ -20,15 +20,15 @@ Network port change monitoring system. Periodically scans IP addresses for open 
 ## Installation
 
 ```bash
-git clone --branch claude/deployment-readiness-check-atHl6 https://github.com/krudolf55/netwatchdog.git
-cd netwatchdog
+git clone --branch claude/deployment-readiness-check-atHl6 https://github.com/krudolf55/periscan.git
+cd periscan
 sudo bash deploy/install.sh
 ```
 
 Then edit the config before starting:
 
 ```bash
-sudo nano /etc/netwatchdog/netwatchdog.yaml
+sudo nano /etc/periscan/periscan.yaml
 ```
 
 ## Managing Hosts
@@ -36,45 +36,45 @@ sudo nano /etc/netwatchdog/netwatchdog.yaml
 **Add a single host, CIDR range, or dash range:**
 
 ```bash
-netwatchdog --config /etc/netwatchdog/netwatchdog.yaml add-host 192.168.1.1
-netwatchdog --config /etc/netwatchdog/netwatchdog.yaml add-host 192.168.1.0/24
-netwatchdog --config /etc/netwatchdog/netwatchdog.yaml add-host 10.0.0.1-10.0.0.50
+periscan --config /etc/periscan/periscan.yaml add-host 192.168.1.1
+periscan --config /etc/periscan/periscan.yaml add-host 192.168.1.0/24
+periscan --config /etc/periscan/periscan.yaml add-host 10.0.0.1-10.0.0.50
 ```
 
 **Edit the config file directly:**
 
 ```bash
-sudo nano /etc/netwatchdog/netwatchdog.yaml
+sudo nano /etc/periscan/periscan.yaml
 ```
 
 Add entries under `hosts.addresses`, then restart the service to sync them into the database:
 
 ```bash
-sudo systemctl restart netwatchdog
+sudo systemctl restart periscan
 ```
 
 **Import hosts from a text file (one address per line):**
 
 ```bash
-netwatchdog --config /etc/netwatchdog/netwatchdog.yaml import-hosts /path/to/ips.txt
+periscan --config /etc/periscan/periscan.yaml import-hosts /path/to/ips.txt
 ```
 
 The file can contain single IPs, CIDR ranges, or dash ranges. Blank lines and lines starting with `#` are ignored. Trailing commas are stripped automatically. After importing, restart the service to apply:
 
 ```bash
-sudo systemctl restart netwatchdog
+sudo systemctl restart periscan
 ```
 
 **List all hosts that will be scanned:**
 
 ```bash
-netwatchdog --config /etc/netwatchdog/netwatchdog.yaml list-hosts
+periscan --config /etc/periscan/periscan.yaml list-hosts
 ```
 
 **Remove a host:**
 
 ```bash
-netwatchdog --config /etc/netwatchdog/netwatchdog.yaml remove-host 192.168.1.1
+periscan --config /etc/periscan/periscan.yaml remove-host 192.168.1.1
 ```
 
 **Reset the database (reload all hosts from config):**
@@ -82,34 +82,34 @@ netwatchdog --config /etc/netwatchdog/netwatchdog.yaml remove-host 192.168.1.1
 If the database gets out of sync or you want a clean slate, delete it and restart. The service will rebuild it from the config file automatically:
 
 ```bash
-sudo systemctl stop netwatchdog
-sudo rm /var/lib/netwatchdog/netwatchdog.db
-sudo systemctl start netwatchdog
+sudo systemctl stop periscan
+sudo rm /var/lib/periscan/periscan.db
+sudo systemctl start periscan
 ```
 
-All hosts defined in `/etc/netwatchdog/netwatchdog.yaml` will be reloaded. Scan history and change logs will be lost.
+All hosts defined in `/etc/periscan/periscan.yaml` will be reloaded. Scan history and change logs will be lost.
 
 ## Service Management
 
 ```bash
-sudo systemctl start netwatchdog
-sudo systemctl stop netwatchdog
-sudo systemctl restart netwatchdog
-sudo systemctl status netwatchdog
-journalctl -u netwatchdog -f
+sudo systemctl start periscan
+sudo systemctl stop periscan
+sudo systemctl restart periscan
+sudo systemctl status periscan
+journalctl -u periscan -f
 ```
 
 ## Running a Scan Immediately
 
 ```bash
-netwatchdog --config /etc/netwatchdog/netwatchdog.yaml scan --type quick
-netwatchdog --config /etc/netwatchdog/netwatchdog.yaml scan --type full
+periscan --config /etc/periscan/periscan.yaml scan --type quick
+periscan --config /etc/periscan/periscan.yaml scan --type full
 ```
 
 Scan a single host:
 
 ```bash
-netwatchdog --config /etc/netwatchdog/netwatchdog.yaml scan --host 192.168.1.1
+periscan --config /etc/periscan/periscan.yaml scan --host 192.168.1.1
 ```
 
 ## Scan Output
@@ -117,31 +117,31 @@ netwatchdog --config /etc/netwatchdog/netwatchdog.yaml scan --host 192.168.1.1
 Port changes are appended to the change log as they are detected:
 
 ```bash
-tail -f /var/log/netwatchdog/changes.jsonl
+tail -f /var/log/periscan/changes.jsonl
 ```
 
 General scan progress and errors:
 
 ```bash
-tail -f /var/log/netwatchdog/netwatchdog.log
+tail -f /var/log/periscan/periscan.log
 ```
 
 Query the database directly:
 
 ```bash
 # open ports found
-sqlite3 /var/lib/netwatchdog/netwatchdog.db "SELECT h.ip_address, p.port, p.protocol, p.service_name FROM port_states p JOIN hosts h ON h.id = p.host_id WHERE p.state='open' ORDER BY h.ip_address, p.port;"
+sqlite3 /var/lib/periscan/periscan.db "SELECT h.ip_address, p.port, p.protocol, p.service_name FROM port_states p JOIN hosts h ON h.id = p.host_id WHERE p.state='open' ORDER BY h.ip_address, p.port;"
 
 # recent scan jobs
-sqlite3 /var/lib/netwatchdog/netwatchdog.db "SELECT id, scan_type, status, hosts_scanned, started_at, completed_at FROM scan_jobs ORDER BY started_at DESC LIMIT 10;"
+sqlite3 /var/lib/periscan/periscan.db "SELECT id, scan_type, status, hosts_scanned, started_at, completed_at FROM scan_jobs ORDER BY started_at DESC LIMIT 10;"
 
 # recent changes detected
-sqlite3 /var/lib/netwatchdog/netwatchdog.db "SELECT h.ip_address, c.port, c.previous_state, c.current_state, c.detected_at FROM change_events c JOIN hosts h ON h.id = c.host_id ORDER BY c.detected_at DESC LIMIT 20;"
+sqlite3 /var/lib/periscan/periscan.db "SELECT h.ip_address, c.port, c.previous_state, c.current_state, c.detected_at FROM change_events c JOIN hosts h ON h.id = c.host_id ORDER BY c.detected_at DESC LIMIT 20;"
 ```
 
 ## Configuration
 
-The config file lives at `/etc/netwatchdog/netwatchdog.yaml`. An annotated example is at `config/netwatchdog.example.yaml`.
+The config file lives at `/etc/periscan/periscan.yaml`. An annotated example is at `config/periscan.example.yaml`.
 
 Key settings to review before deploying:
 

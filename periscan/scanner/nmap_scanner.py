@@ -8,7 +8,7 @@ from typing import List, Optional
 
 import nmap
 
-from netwatchdog.scanner.base import (
+from periscan.scanner.base import (
     BaseScanner,
     HostResult,
     PortResult,

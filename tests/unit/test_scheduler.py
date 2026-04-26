@@ -10,15 +10,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 from click.testing import CliRunner
 
-from netwatchdog.config import Config
-from netwatchdog.database.connection import create_db_engine, create_session_factory
-from netwatchdog.database.migrations import run_migrations
-from netwatchdog.database.models import ChangeEvent, Host, PortState, ScanJob
-from netwatchdog.database.sync import sync_hosts_from_config
-from netwatchdog.notifier.base import BaseNotifier
-from netwatchdog.scanner.base import HostResult, PortResult, PortState as PSEnum, ScanResult
-from netwatchdog.scheduler.jobs import run_scan_job
-from netwatchdog.scheduler.manager import _parse_cron
+from periscan.config import Config
+from periscan.database.connection import create_db_engine, create_session_factory
+from periscan.database.migrations import run_migrations
+from periscan.database.models import ChangeEvent, Host, PortState, ScanJob
+from periscan.database.sync import sync_hosts_from_config
+from periscan.notifier.base import BaseNotifier
+from periscan.scanner.base import HostResult, PortResult, PortState as PSEnum, ScanResult
+from periscan.scheduler.jobs import run_scan_job
+from periscan.scheduler.manager import _parse_cron
 
 
 def _now():
@@ -70,7 +70,7 @@ class TestRunScanJob:
 
         return engine, config
 
-    @patch("netwatchdog.scheduler.jobs._create_scanner")
+    @patch("periscan.scheduler.jobs._create_scanner")
     def test_scan_job_pipeline(self, mock_create, setup):
         engine, config = setup
 
@@ -109,7 +109,7 @@ class TestRunScanJob:
         assert len(states) == 2
         session.close()
 
-    @patch("netwatchdog.scheduler.jobs._create_scanner")
+    @patch("periscan.scheduler.jobs._create_scanner")
     def test_scan_job_with_notifier(self, mock_create, setup):
         engine, config = setup
 
@@ -132,7 +132,7 @@ class TestRunScanJob:
         run_scan_job(engine, config, "quick", notifiers=[fake_notifier])
         fake_notifier.notify.assert_called_once()
 
-    @patch("netwatchdog.scheduler.jobs._create_scanner")
+    @patch("periscan.scheduler.jobs._create_scanner")
     def test_scan_job_no_hosts(self, mock_create, tmp_path: Path):
         """Scan with no active hosts completes immediately."""
         db_path = tmp_path / "empty.db"
@@ -150,7 +150,7 @@ class TestRunScanJob:
         assert job.hosts_scanned == 0
         mock_create.assert_not_called()
 
-    @patch("netwatchdog.scheduler.jobs._create_scanner")
+    @patch("periscan.scheduler.jobs._create_scanner")
     def test_scan_job_failure(self, mock_create, setup):
         engine, config = setup
 
@@ -162,7 +162,7 @@ class TestRunScanJob:
         assert job.status == "failed"
         assert "Scanner crashed" in job.error_message
 
-    @patch("netwatchdog.scheduler.jobs._create_scanner")
+    @patch("periscan.scheduler.jobs._create_scanner")
     def test_second_scan_detects_changes(self, mock_create, setup):
         """Run two scans — second one should detect port closing."""
         engine, config = setup
@@ -224,7 +224,7 @@ class TestCliScan:
         """))
         return cfg
 
-    @patch("netwatchdog.scheduler.jobs._create_scanner")
+    @patch("periscan.scheduler.jobs._create_scanner")
     def test_cli_scan(self, mock_create, config_file: Path):
         mock_scanner = MagicMock()
         mock_scanner.scan.return_value = ScanResult(
@@ -238,7 +238,7 @@ class TestCliScan:
         )
         mock_create.return_value = mock_scanner
 
-        from netwatchdog.cli import cli
+        from periscan.cli import cli
         runner = CliRunner()
         result = runner.invoke(cli, ["-c", str(config_file), "scan"])
         assert result.exit_code == 0

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from netwatchdog.config import Config
-from netwatchdog.database.connection import create_db_engine, create_session_factory
-from netwatchdog.database.migrations import run_migrations
-from netwatchdog.database.models import Host
-from netwatchdog.database.sync import sync_hosts_from_config
+from periscan.config import Config
+from periscan.database.connection import create_db_engine, create_session_factory
+from periscan.database.migrations import run_migrations
+from periscan.database.models import Host
+from periscan.database.sync import sync_hosts_from_config
 
 
 def _setup(tmp_path: Path):
