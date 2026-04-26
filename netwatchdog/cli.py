@@ -171,7 +171,46 @@ def import_hosts(ctx: click.Context, file: Path) -> None:
         click.echo("Restart the service to apply: sudo systemctl restart netwatchdog")
 
 
-# ---- remove-host -----------------------------------------------------------
+# ---- dedupe-hosts ----------------------------------------------------------
+
+@cli.command("dedupe-hosts")
+@click.pass_context
+def dedupe_hosts(ctx: click.Context) -> None:
+    """Remove duplicate addresses from the config file."""
+    import yaml
+
+    config_path = ctx.obj.get("config_path")
+    if config_path is None:
+        raise click.ClickException(
+            "No config file specified. Use: netwatchdog --config /path/to/config.yaml dedupe-hosts"
+        )
+
+    raw = yaml.safe_load(config_path.read_text()) or {}
+    hosts_section = raw.get("hosts", {})
+    if isinstance(hosts_section, list):
+        addresses = hosts_section
+    else:
+        addresses = hosts_section.get("addresses", [])
+
+    before = len(addresses)
+    seen: set = set()
+    deduped = []
+    for addr in addresses:
+        if addr not in seen:
+            seen.add(addr)
+            deduped.append(addr)
+
+    removed = before - len(deduped)
+
+    if isinstance(raw.get("hosts"), list):
+        raw["hosts"] = deduped
+    else:
+        raw["hosts"]["addresses"] = deduped
+
+    config_path.write_text(yaml.dump(raw, default_flow_style=False, allow_unicode=True))
+    click.echo(f"Removed {removed} duplicate(s), {len(deduped)} unique address(es) remain.")
+    if removed:
+        click.echo("Restart the service to apply: sudo systemctl restart netwatchdog")
 
 @cli.command("remove-host")
 @click.argument("target")
