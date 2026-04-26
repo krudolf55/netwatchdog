@@ -65,6 +65,18 @@ netwatchdog --config /etc/netwatchdog/netwatchdog.yaml list-hosts
 netwatchdog --config /etc/netwatchdog/netwatchdog.yaml remove-host 192.168.1.1
 ```
 
+**Reset the database (reload all hosts from config):**
+
+If the database gets out of sync or you want a clean slate, delete it and restart. The service will rebuild it from the config file automatically:
+
+```bash
+sudo systemctl stop netwatchdog
+sudo rm /var/lib/netwatchdog/netwatchdog.db
+sudo systemctl start netwatchdog
+```
+
+All hosts defined in `/etc/netwatchdog/netwatchdog.yaml` will be reloaded. Scan history and change logs will be lost.
+
 ## Service Management
 
 ```bash
