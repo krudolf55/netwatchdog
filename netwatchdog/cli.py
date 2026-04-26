@@ -314,20 +314,47 @@ def scan_now(ctx: click.Context, scan_type: str, host: Optional[str]) -> None:
     engine = create_db_engine(cfg.database.path, wal_mode=cfg.database.wal_mode)
     run_migrations(engine)
 
-    # Sync hosts from config
+    if host:
+        # Ad-hoc single-host scan — print results directly, no DB required
+        from netwatchdog.scanner.nmap_scanner import NmapScanner
+        from netwatchdog.scanner.orchestrator import ScanOrchestrator
+        port_range = cfg.scanner.quick_ports if scan_type == "quick" else cfg.scanner.full_ports
+        scanner = NmapScanner(
+            nmap_path=cfg.scanner.nmap_path,
+            timing=cfg.scanner.nmap_timing,
+            require_root=cfg.scanner.require_root,
+        )
+        orchestrator = ScanOrchestrator.from_config(scanner, cfg.scanner)
+        click.echo(f"Scanning {host} ({scan_type}, ports {port_range})...")
+        result = orchestrator.run_scan([host], port_range, scan_type)
+        if result.error:
+            click.echo(f"Error: {result.error}", err=True)
+        if not result.hosts:
+            click.echo("No results returned.")
+            return
+        host_result = result.hosts[0]
+        open_ports = [p for p in host_result.ports if p.state == "open"]
+        if open_ports:
+            click.echo(f"Open ports on {host}:")
+            for p in sorted(open_ports, key=lambda x: x.port):
+                svc = f"  ({p.service_name})" if p.service_name else ""
+                click.echo(f"  {p.port}/{p.protocol}{svc}")
+        else:
+            click.echo(f"No open ports found on {host}.")
+        return
+
+    # Full scheduled-style scan against all hosts in DB
     if cfg.hosts:
         factory = create_session_factory(engine)
         session = factory()
         sync_hosts_from_config(session, cfg)
         session.close()
 
-    # Build notifiers
     notifiers = _build_notifiers(cfg)
 
     from netwatchdog.scheduler.jobs import run_scan_job
-    target = host or "all hosts"
-    click.echo(f"Starting {scan_type} scan ({target})...")
-    job = run_scan_job(engine, cfg, scan_type, triggered_by="manual", notifiers=notifiers, host_filter=host)
+    click.echo(f"Starting {scan_type} scan (all hosts)...")
+    job = run_scan_job(engine, cfg, scan_type, triggered_by="manual", notifiers=notifiers)
     click.echo(f"Scan complete: status={job.status}, hosts={job.hosts_scanned}")
     if job.error_message:
         click.echo(f"Errors: {job.error_message}")
