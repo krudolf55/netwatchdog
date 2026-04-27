@@ -7,8 +7,8 @@ from textwrap import dedent
 
 from sqlalchemy import inspect, text
 
-from netwatchdog.database.connection import create_db_engine, create_session_factory
-from netwatchdog.database.migrations import run_migrations
+from periscan.database.connection import create_db_engine, create_session_factory
+from periscan.database.migrations import run_migrations
 
 
 def test_engine_creates_file(tmp_path: Path):

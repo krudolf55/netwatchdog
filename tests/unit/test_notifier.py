@@ -10,23 +10,23 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from netwatchdog.config import EmailConfig
-from netwatchdog.database.connection import create_db_engine, create_session_factory
-from netwatchdog.database.migrations import run_migrations
-from netwatchdog.database.models import (
+from periscan.config import EmailConfig
+from periscan.database.connection import create_db_engine, create_session_factory
+from periscan.database.migrations import run_migrations
+from periscan.database.models import (
     ChangeEvent,
     Host,
     NotificationLog,
     ScanJob,
 )
-from netwatchdog.notifier.base import BaseNotifier
-from netwatchdog.notifier.dispatcher import NotificationDispatcher
-from netwatchdog.notifier.email_notifier import (
+from periscan.notifier.base import BaseNotifier
+from periscan.notifier.dispatcher import NotificationDispatcher
+from periscan.notifier.email_notifier import (
     EmailNotifier,
     _build_change_summary,
     _build_html_summary,
 )
-from netwatchdog.notifier.log_notifier import LogNotifier
+from periscan.notifier.log_notifier import LogNotifier
 
 
 def _now():
@@ -155,7 +155,7 @@ class TestEmailNotifier:
         result = notifier.notify([])
         assert result is True
 
-    @patch("netwatchdog.notifier.email_notifier.smtplib.SMTP")
+    @patch("periscan.notifier.email_notifier.smtplib.SMTP")
     def test_send_email(self, mock_smtp_class, sample_changes):
         mock_server = MagicMock()
         mock_smtp_class.return_value = mock_server
@@ -185,7 +185,7 @@ class TestEmailNotifier:
         assert call_args[0][1] == ["ops@test.com"]
         assert "port change" in call_args[0][2].lower()
 
-    @patch("netwatchdog.notifier.email_notifier.smtplib.SMTP")
+    @patch("periscan.notifier.email_notifier.smtplib.SMTP")
     def test_smtp_failure(self, mock_smtp_class, sample_changes):
         mock_smtp_class.side_effect = ConnectionRefusedError("Connection refused")
 

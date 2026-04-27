@@ -7,17 +7,17 @@ from pathlib import Path
 
 import pytest
 
-from netwatchdog.database.connection import create_db_engine, create_session_factory
-from netwatchdog.database.migrations import run_migrations
-from netwatchdog.database.models import (
+from periscan.database.connection import create_db_engine, create_session_factory
+from periscan.database.migrations import run_migrations
+from periscan.database.models import (
     ChangeEvent,
     Host,
     PortHistory,
     PortState,
     ScanJob,
 )
-from netwatchdog.detector.change_detector import ChangeDetector, _parse_port_range
-from netwatchdog.scanner.base import (
+from periscan.detector.change_detector import ChangeDetector, _parse_port_range
+from periscan.scanner.base import (
     HostResult,
     PortResult,
     PortState as PortStateEnum,

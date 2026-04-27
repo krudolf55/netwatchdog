@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 import yaml
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
@@ -16,12 +16,12 @@ from pydantic import BaseModel, EmailStr, Field, field_validator, model_validato
 
 
 class DatabaseConfig(BaseModel):
-    path: Path = Path("/var/lib/netwatchdog/netwatchdog.db")
+    path: Path = Path("/var/lib/periscan/periscan.db")
     wal_mode: bool = True
 
 
 class HostLabels(BaseModel):
-    labels: dict[str, str] = Field(default_factory=dict)
+    labels: Dict[str, str] = Field(default_factory=dict)
 
 
 class ScannerConfig(BaseModel):
@@ -70,14 +70,14 @@ class EmailConfig(BaseModel):
     smtp_username: str = ""
     smtp_password: str = ""
     from_address: str = ""
-    to_addresses: list[str] = Field(default_factory=list)
+    to_addresses: List[str] = Field(default_factory=list)
     batch_changes: bool = True
     min_severity: str = Field("any", pattern="^(any|open_only)$")
 
 
 class LogNotifierConfig(BaseModel):
     enabled: bool = True
-    path: Path = Path("/var/log/netwatchdog/changes.jsonl")
+    path: Path = Path("/var/log/periscan/changes.jsonl")
     rotate_mb: int = Field(100, ge=1)
     backup_count: int = Field(5, ge=0)
 
@@ -90,7 +90,7 @@ class NotificationsConfig(BaseModel):
 class LoggingConfig(BaseModel):
     level: str = Field("INFO", pattern="^(DEBUG|INFO|WARNING|ERROR)$")
     format: str = Field("json", pattern="^(json|text)$")
-    path: Path = Path("/var/log/netwatchdog/netwatchdog.log")
+    path: Path = Path("/var/log/periscan/periscan.log")
     rotate_mb: int = Field(50, ge=1)
     backup_count: int = Field(10, ge=0)
 
@@ -102,8 +102,8 @@ class LoggingConfig(BaseModel):
 
 class Config(BaseModel):
     database: DatabaseConfig = DatabaseConfig()
-    hosts: list[str] = Field(default_factory=list)
-    host_labels: dict[str, str] = Field(default_factory=dict)
+    hosts: List[str] = Field(default_factory=list)
+    host_labels: Dict[str, str] = Field(default_factory=dict)
     scanner: ScannerConfig = ScannerConfig()
     schedule: ScheduleConfig = ScheduleConfig()
     web: WebConfig = WebConfig()
@@ -112,7 +112,7 @@ class Config(BaseModel):
 
     @field_validator("hosts")
     @classmethod
-    def hosts_not_empty(cls, v: list[str]) -> list[str]:
+    def hosts_not_empty(cls, v: List[str]) -> List[str]:
         if not v:
             raise ValueError("hosts list cannot be empty")
         return v
@@ -133,15 +133,15 @@ class Config(BaseModel):
 # ---------------------------------------------------------------------------
 
 _SEARCH_PATHS = [
-    Path("config/netwatchdog.yaml"),
-    Path.home() / ".config" / "netwatchdog" / "config.yaml",
-    Path("/etc/netwatchdog/config.yaml"),
+    Path("config/periscan.yaml"),
+    Path.home() / ".config" / "periscan" / "config.yaml",
+    Path("/etc/periscan/config.yaml"),
 ]
 
 
-def _apply_env_overrides(data: dict[str, Any]) -> dict[str, Any]:
-    """Apply NETWATCHDOG__SECTION__KEY env vars as overrides."""
-    prefix = "NETWATCHDOG__"
+def _apply_env_overrides(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Apply PERISCAN__SECTION__KEY env vars as overrides."""
+    prefix = "PERISCAN__"
     for key, value in os.environ.items():
         if not key.startswith(prefix):
             continue
@@ -153,18 +153,18 @@ def _apply_env_overrides(data: dict[str, Any]) -> dict[str, Any]:
     return data
 
 
-def load_config(path: Path | None = None) -> Config:
+def load_config(path: Optional[Path] = None) -> Config:
     """Load and validate configuration from a YAML file.
 
     Search order (first found wins):
       1. Explicit path argument
-      2. config/netwatchdog.yaml (relative to cwd)
-      3. ~/.config/netwatchdog/config.yaml
-      4. /etc/netwatchdog/config.yaml
+      2. config/periscan.yaml (relative to cwd)
+      3. ~/.config/periscan/config.yaml
+      4. /etc/periscan/config.yaml
 
     Environment variable overrides are applied after file loading.
     """
-    config_path: Path | None = path
+    config_path: Optional[Path] = path
     if config_path is None:
         for candidate in _SEARCH_PATHS:
             if candidate.exists():

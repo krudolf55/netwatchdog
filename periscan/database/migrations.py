@@ -16,7 +16,7 @@ from pathlib import Path
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
-MIGRATIONS_DIR = Path(__file__).resolve().parent.parent.parent / "migrations"
+MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
 
 _BOOTSTRAP_SQL = """
 CREATE TABLE IF NOT EXISTS schema_migrations (

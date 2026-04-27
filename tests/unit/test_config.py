@@ -6,11 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from netwatchdog.config import Config, load_config
+from periscan.config import Config, load_config
 
 
 def write_yaml(tmp_path: Path, content: str) -> Path:
-    p = tmp_path / "netwatchdog.yaml"
+    p = tmp_path / "periscan.yaml"
     p.write_text(textwrap.dedent(content))
     return p
 
@@ -70,8 +70,8 @@ def test_env_override(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
           addresses:
             - 10.0.0.1
     """)
-    monkeypatch.setenv("NETWATCHDOG__WEB__PORT", "7777")
-    monkeypatch.setenv("NETWATCHDOG__SCANNER__BATCH_SIZE", "10")
+    monkeypatch.setenv("PERISCAN__WEB__PORT", "7777")
+    monkeypatch.setenv("PERISCAN__SCANNER__BATCH_SIZE", "10")
     cfg = load_config(p)
     assert cfg.web.port == 7777
     assert cfg.scanner.batch_size == 10

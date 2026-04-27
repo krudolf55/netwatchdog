@@ -1,4 +1,4 @@
-"""CLI entry point for netwatchdog."""
+"""CLI entry point for periscan."""
 
 from __future__ import annotations
 
@@ -8,12 +8,12 @@ from typing import Optional
 
 import click
 
-from netwatchdog.config import load_config
-from netwatchdog.database.connection import create_db_engine, create_session_factory
-from netwatchdog.database.migrations import run_migrations
-from netwatchdog.database.models import Host
-from netwatchdog.database.sync import sync_hosts_from_config
-from netwatchdog.utils.ip_utils import expand_target, validate_ip
+from periscan.config import load_config
+from periscan.database.connection import create_db_engine, create_session_factory
+from periscan.database.migrations import run_migrations
+from periscan.database.models import Host
+from periscan.database.sync import sync_hosts_from_config
+from periscan.utils.ip_utils import expand_target, validate_ip
 
 
 def _now() -> str:
@@ -29,7 +29,7 @@ def _now() -> str:
 )
 @click.pass_context
 def cli(ctx: click.Context, config_path: Optional[Path]) -> None:
-    """netwatchdog — Network port change monitoring."""
+    """periscan — Network port change monitoring."""
     ctx.ensure_object(dict)
     ctx.obj["config_path"] = config_path
 
@@ -109,7 +109,108 @@ def add_host(ctx: click.Context, target: str, label: Optional[str]) -> None:
     click.echo(f"Added {added} host(s), skipped {skipped} duplicate(s).")
 
 
-# ---- remove-host -----------------------------------------------------------
+# ---- import-hosts ----------------------------------------------------------
+
+@cli.command("import-hosts")
+@click.argument("file", type=click.Path(exists=True, path_type=Path))
+@click.pass_context
+def import_hosts(ctx: click.Context, file: Path) -> None:
+    """Import hosts from a text file into the config file (one entry per line).
+
+    Each line may be a single IP, CIDR range, or dash range:
+
+    \b
+        192.168.1.1
+        10.0.0.0/24
+        10.1.0.1-10.1.0.50
+    Blank lines and lines starting with # are ignored.
+    Restart the service after importing to pick up the changes.
+    """
+    import yaml
+
+    config_path = ctx.obj.get("config_path")
+    if config_path is None:
+        raise click.ClickException(
+            "No config file specified. Use: periscan --config /path/to/config.yaml import-hosts ..."
+        )
+
+    raw = yaml.safe_load(config_path.read_text()) or {}
+    hosts_section = raw.setdefault("hosts", {})
+    if isinstance(hosts_section, list):
+        # bare list format — normalise to dict form
+        hosts_section = {"addresses": hosts_section}
+        raw["hosts"] = hosts_section
+    existing: List[str] = hosts_section.setdefault("addresses", [])
+    existing_set = set(existing)
+
+    added = skipped = errors = 0
+    for lineno, raw_line in enumerate(file.read_text().splitlines(), 1):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        target = line.split(None, 1)[0].strip(",;")
+
+        try:
+            expand_target(target)  # validate only
+        except ValueError as e:
+            click.echo(f"  line {lineno}: skipping {target!r} — {e}", err=True)
+            errors += 1
+            continue
+
+        if target in existing_set:
+            skipped += 1
+            continue
+
+        existing.append(target)
+        existing_set.add(target)
+        added += 1
+
+    config_path.write_text(yaml.dump(raw, default_flow_style=False, allow_unicode=True))
+    click.echo(f"Imported {added} host(s), skipped {skipped} duplicate(s), {errors} error(s).")
+    if added:
+        click.echo("Restart the service to apply: sudo systemctl restart periscan")
+
+
+# ---- dedupe-hosts ----------------------------------------------------------
+
+@cli.command("dedupe-hosts")
+@click.pass_context
+def dedupe_hosts(ctx: click.Context) -> None:
+    """Remove duplicate addresses from the config file."""
+    import yaml
+
+    config_path = ctx.obj.get("config_path")
+    if config_path is None:
+        raise click.ClickException(
+            "No config file specified. Use: periscan --config /path/to/config.yaml dedupe-hosts"
+        )
+
+    raw = yaml.safe_load(config_path.read_text()) or {}
+    hosts_section = raw.get("hosts", {})
+    if isinstance(hosts_section, list):
+        addresses = hosts_section
+    else:
+        addresses = hosts_section.get("addresses", [])
+
+    before = len(addresses)
+    seen: set = set()
+    deduped = []
+    for addr in addresses:
+        if addr not in seen:
+            seen.add(addr)
+            deduped.append(addr)
+
+    removed = before - len(deduped)
+
+    if isinstance(raw.get("hosts"), list):
+        raw["hosts"] = deduped
+    else:
+        raw["hosts"]["addresses"] = deduped
+
+    config_path.write_text(yaml.dump(raw, default_flow_style=False, allow_unicode=True))
+    click.echo(f"Removed {removed} duplicate(s), {len(deduped)} unique address(es) remain.")
+    if removed:
+        click.echo("Restart the service to apply: sudo systemctl restart periscan")
 
 @cli.command("remove-host")
 @click.argument("target")
@@ -182,7 +283,7 @@ def status(ctx: click.Context) -> None:
     cfg, engine, session = _get_session(ctx)
 
     total_hosts = session.query(Host).filter_by(active=1).count()
-    from netwatchdog.database.models import ScanJob, PortState, ChangeEvent
+    from periscan.database.models import ScanJob, PortState, ChangeEvent
 
     open_ports = session.query(PortState).filter_by(state="open").count()
     last_job = (
@@ -205,25 +306,54 @@ def status(ctx: click.Context) -> None:
 
 @cli.command("scan")
 @click.option("--type", "-t", "scan_type", type=click.Choice(["quick", "full"]), default="quick")
+@click.option("--host", "-h", "host", default=None, help="Scan a single IP instead of all hosts.")
 @click.pass_context
-def scan_now(ctx: click.Context, scan_type: str) -> None:
+def scan_now(ctx: click.Context, scan_type: str, host: Optional[str]) -> None:
     """Run a scan immediately."""
     cfg = load_config(ctx.obj.get("config_path"))
     engine = create_db_engine(cfg.database.path, wal_mode=cfg.database.wal_mode)
     run_migrations(engine)
 
-    # Sync hosts from config
+    if host:
+        # Ad-hoc single-host scan — print results directly, no DB required
+        from periscan.scanner.nmap_scanner import NmapScanner
+        from periscan.scanner.orchestrator import ScanOrchestrator
+        port_range = cfg.scanner.quick_ports if scan_type == "quick" else cfg.scanner.full_ports
+        scanner = NmapScanner(
+            nmap_path=cfg.scanner.nmap_path,
+            timing=cfg.scanner.nmap_timing,
+            require_root=cfg.scanner.require_root,
+        )
+        orchestrator = ScanOrchestrator.from_config(scanner, cfg.scanner)
+        click.echo(f"Scanning {host} ({scan_type}, ports {port_range})...")
+        result = orchestrator.run_scan([host], port_range, scan_type)
+        if result.error:
+            click.echo(f"Error: {result.error}", err=True)
+        if not result.hosts:
+            click.echo("No results returned.")
+            return
+        host_result = result.hosts[0]
+        open_ports = [p for p in host_result.ports if p.state == "open"]
+        if open_ports:
+            click.echo(f"Open ports on {host}:")
+            for p in sorted(open_ports, key=lambda x: x.port):
+                svc = f"  ({p.service_name})" if p.service_name else ""
+                click.echo(f"  {p.port}/{p.protocol}{svc}")
+        else:
+            click.echo(f"No open ports found on {host}.")
+        return
+
+    # Full scheduled-style scan against all hosts in DB
     if cfg.hosts:
         factory = create_session_factory(engine)
         session = factory()
         sync_hosts_from_config(session, cfg)
         session.close()
 
-    # Build notifiers
     notifiers = _build_notifiers(cfg)
 
-    from netwatchdog.scheduler.jobs import run_scan_job
-    click.echo(f"Starting {scan_type} scan...")
+    from periscan.scheduler.jobs import run_scan_job
+    click.echo(f"Starting {scan_type} scan (all hosts)...")
     job = run_scan_job(engine, cfg, scan_type, triggered_by="manual", notifiers=notifiers)
     click.echo(f"Scan complete: status={job.status}, hosts={job.hosts_scanned}")
     if job.error_message:
@@ -254,7 +384,7 @@ def start(ctx: click.Context) -> None:
 
     notifiers = _build_notifiers(cfg)
 
-    from netwatchdog.scheduler.manager import SchedulerManager
+    from periscan.scheduler.manager import SchedulerManager
     manager = SchedulerManager(engine, cfg, notifiers)
 
     click.echo("Starting scheduler...")
@@ -273,13 +403,13 @@ def _build_notifiers(cfg) -> list:
     """Build notifier instances from config."""
     notifiers = []
     if cfg.notifications.log.enabled:
-        from netwatchdog.notifier.log_notifier import LogNotifier
+        from periscan.notifier.log_notifier import LogNotifier
         notifiers.append(LogNotifier(
             log_path=cfg.notifications.log.path,
             rotate_mb=cfg.notifications.log.rotate_mb,
             backup_count=cfg.notifications.log.backup_count,
         ))
     if cfg.notifications.email.enabled:
-        from netwatchdog.notifier.email_notifier import EmailNotifier
+        from periscan.notifier.email_notifier import EmailNotifier
         notifiers.append(EmailNotifier(cfg.notifications.email))
     return notifiers

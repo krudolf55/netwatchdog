@@ -1,4 +1,4 @@
-"""SQLAlchemy ORM models for all netwatchdog tables."""
+"""SQLAlchemy ORM models for all periscan tables."""
 
 from __future__ import annotations
 

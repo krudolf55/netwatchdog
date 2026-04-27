@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from netwatchdog.utils.ip_utils import expand_target, validate_ip
+from periscan.utils.ip_utils import expand_target, validate_ip
 
 
 def test_single_ip():

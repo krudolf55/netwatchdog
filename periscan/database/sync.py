@@ -6,9 +6,9 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
-from netwatchdog.config import Config
-from netwatchdog.database.models import Host
-from netwatchdog.utils.ip_utils import expand_target
+from periscan.config import Config
+from periscan.database.models import Host
+from periscan.utils.ip_utils import expand_target
 
 
 def _now() -> str:

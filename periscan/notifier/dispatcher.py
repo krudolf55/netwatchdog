@@ -8,8 +8,8 @@ from typing import List
 
 from sqlalchemy.orm import Session
 
-from netwatchdog.database.models import ChangeEvent, NotificationLog
-from netwatchdog.notifier.base import BaseNotifier
+from periscan.database.models import ChangeEvent, NotificationLog
+from periscan.notifier.base import BaseNotifier
 
 logger = logging.getLogger(__name__)
 

@@ -10,15 +10,15 @@ from typing import List, Optional
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
-from netwatchdog.config import Config
-from netwatchdog.database.connection import create_session_factory
-from netwatchdog.database.models import ChangeEvent, Host, ScanJob
-from netwatchdog.detector.change_detector import ChangeDetector
-from netwatchdog.notifier.base import BaseNotifier
-from netwatchdog.notifier.dispatcher import NotificationDispatcher
-from netwatchdog.scanner.base import ScanResult
-from netwatchdog.scanner.nmap_scanner import NmapScanner
-from netwatchdog.scanner.orchestrator import ScanOrchestrator
+from periscan.config import Config
+from periscan.database.connection import create_session_factory
+from periscan.database.models import ChangeEvent, Host, ScanJob
+from periscan.detector.change_detector import ChangeDetector
+from periscan.notifier.base import BaseNotifier
+from periscan.notifier.dispatcher import NotificationDispatcher
+from periscan.scanner.base import ScanResult
+from periscan.scanner.nmap_scanner import NmapScanner
+from periscan.scanner.orchestrator import ScanOrchestrator
 
 logger = logging.getLogger(__name__)
 

@@ -12,9 +12,9 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from sqlalchemy.engine import Engine
 
-from netwatchdog.config import Config
-from netwatchdog.notifier.base import BaseNotifier
-from netwatchdog.scheduler.jobs import run_scan_job
+from periscan.config import Config
+from periscan.notifier.base import BaseNotifier
+from periscan.scheduler.jobs import run_scan_job
 
 logger = logging.getLogger(__name__)
 
